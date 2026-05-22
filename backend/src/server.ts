@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { productRoutes } from "./routes/productRoutes";
+import { dashboardRoutes } from "./routes/dashboardRoutes";
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.get("/", (request, response) => {
 });
 
 app.use(productRoutes);
+app.use(dashboardRoutes);
 
 const PORT = 3333;
 

@@ -176,3 +176,52 @@ h1 {
   background: rgba(239, 68, 68, 0.16);
   color: #ef4444;
 }
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+  max-width: 1200px;
+  margin: 32px 0 40px;
+}
+
+.dashboard-card {
+  padding: 18px;
+  border: 1px solid #1e293b;
+  border-radius: 16px;
+  background: #0f172a;
+}
+
+.dashboard-card span {
+  display: block;
+  margin-bottom: 10px;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.dashboard-card strong {
+  color: #f8fafc;
+  font-size: 28px;
+}
+
+.dashboard-card.highlight {
+  border-color: rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.dashboard-card.highlight strong {
+  color: #22c55e;
+  font-size: 22px;
+}
+
+@media (max-width: 1000px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -12,6 +12,15 @@ type Product = {
   riskValue: number;
 };
 
+type DashboardData = {
+  totalProducts: number;
+  expiredProducts: number;
+  criticalProducts: number;
+  attentionProducts: number;
+  safeProducts: number;
+  totalRiskValue: number;
+};
+
 function translateProductStatus(status: Product["status"]) {
   const statusMap: Record<Product["status"], string> = {
     expired: "Vencido",
@@ -55,11 +64,18 @@ function formatCurrency(value: number) {
 
 function Home() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+    null,
+  );
 
   useEffect(() => {
     fetch("http://localhost:3333/products")
       .then((response) => response.json())
       .then((data) => setProducts(data));
+
+    fetch("http://localhost:3333/dashboard")
+      .then((response) => response.json())
+      .then((data) => setDashboardData(data));
   }, []);
 
   return (
@@ -79,6 +95,40 @@ function Home() {
           <button className="secondary">Ver funcionalidades</button>
         </div>
       </section>
+
+      {dashboardData && (
+        <section className="dashboard-grid">
+          <article className="dashboard-card">
+            <span>Total de produtos</span>
+            <strong>{dashboardData.totalProducts}</strong>
+          </article>
+
+          <article className="dashboard-card">
+            <span>Vencidos</span>
+            <strong>{dashboardData.expiredProducts}</strong>
+          </article>
+
+          <article className="dashboard-card">
+            <span>Críticos</span>
+            <strong>{dashboardData.criticalProducts}</strong>
+          </article>
+
+          <article className="dashboard-card">
+            <span>Em atenção</span>
+            <strong>{dashboardData.attentionProducts}</strong>
+          </article>
+
+          <article className="dashboard-card">
+            <span>Seguros</span>
+            <strong>{dashboardData.safeProducts}</strong>
+          </article>
+
+          <article className="dashboard-card highlight">
+            <span>Valor total em risco</span>
+            <strong>{formatCurrency(dashboardData.totalRiskValue)}</strong>
+          </article>
+        </section>
+      )}
 
       <section className="cards">
         <article className="card">
