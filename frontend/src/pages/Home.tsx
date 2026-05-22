@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 
 type Product = {
   id: number;
@@ -68,15 +69,77 @@ function Home() {
     null,
   );
 
-  useEffect(() => {
-    fetch("http://localhost:3333/products")
-      .then((response) => response.json())
-      .then((data) => setProducts(data));
+  const [formData, setFormData] = useState({
+    name: "",
+    category: "",
+    quantity: "",
+    unitCost: "",
+    expirationDate: "",
+  });
 
-    fetch("http://localhost:3333/dashboard")
-      .then((response) => response.json())
-      .then((data) => setDashboardData(data));
+  async function loadProducts() {
+    const response = await fetch("http://localhost:3333/products");
+    const data = await response.json();
+
+    setProducts(data);
+  }
+
+  async function loadDashboardData() {
+    const response = await fetch("http://localhost:3333/dashboard");
+    const data = await response.json();
+
+    setDashboardData(data);
+  }
+
+  useEffect(() => {
+    loadProducts();
+    loadDashboardData();
   }, []);
+
+  function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
+    const { name, value } = event.target;
+
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+  }
+
+  async function handleCreateProduct(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const response = await fetch("http://localhost:3333/products", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: formData.name,
+        category: formData.category,
+        quantity: Number(formData.quantity),
+        unitCost: Number(formData.unitCost),
+        expirationDate: formData.expirationDate,
+      }),
+    });
+
+    if (!response.ok) {
+      alert("Não foi possível cadastrar o produto. Verifique os dados.");
+      return;
+    }
+
+    await response.json();
+
+    await loadProducts();
+    await loadDashboardData();
+
+    setFormData({
+      name: "",
+      category: "",
+      quantity: "",
+      unitCost: "",
+      expirationDate: "",
+    });
+  }
 
   return (
     <main className="container">
@@ -148,6 +211,7 @@ function Home() {
             financeiras.
           </p>
         </article>
+
         <article className="card">
           <h2>Diferencial</h2>
           <p>
@@ -155,6 +219,74 @@ function Home() {
             e apoia decisões como promoção, doação ou descarte.
           </p>
         </article>
+      </section>
+
+      <section className="form-section">
+        <h2>Cadastrar produto</h2>
+
+        <form className="product-form" onSubmit={handleCreateProduct}>
+          <div className="form-group">
+            <label htmlFor="name">Nome do produto</label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              placeholder="Ex: Leite Integral"
+              value={formData.name}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="category">Categoria</label>
+            <input
+              id="category"
+              name="category"
+              type="text"
+              placeholder="Ex: Laticínios"
+              value={formData.category}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="quantity">Quantidade</label>
+            <input
+              id="quantity"
+              name="quantity"
+              type="number"
+              placeholder="Ex: 20"
+              value={formData.quantity}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="unitCost">Custo unitário</label>
+            <input
+              id="unitCost"
+              name="unitCost"
+              type="number"
+              step="0.01"
+              placeholder="Ex: 4.50"
+              value={formData.unitCost}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="expirationDate">Data de validade</label>
+            <input
+              id="expirationDate"
+              name="expirationDate"
+              type="date"
+              value={formData.expirationDate}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <button type="submit">Cadastrar produto</button>
+        </form>
       </section>
 
       <section className="products-section">
