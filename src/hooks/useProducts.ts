@@ -1,0 +1,178 @@
+import { useEffect, useState } from "react";
+import type { ChangeEvent, FormEvent } from "react";
+import type { DashboardData, FieldErrors, FormData, Product } from "../types/product";
+import { calcDashboard } from "../lib/productUtils";
+import { createProduct, deleteProduct, getProducts, updateProduct } from "../lib/storage";
+
+const EMPTY_FORM: FormData = {
+  name: "",
+  category: "",
+  quantity: "",
+  unitCost: "",
+  expirationDate: "",
+  isDonation: false,
+};
+
+const EMPTY_ERRORS: FieldErrors = {
+  name: "",
+  category: "",
+  quantity: "",
+  unitCost: "",
+  expirationDate: "",
+};
+
+export function useProducts() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [editingProductId, setEditingProductId] = useState<number | null>(null);
+  const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [feedbackType, setFeedbackType] = useState<"success" | "error" | "">("");
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>(EMPTY_ERRORS);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | Product["status"]>("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [sortOption, setSortOption] = useState<
+    "" | "name" | "quantity" | "expirationDate" | "riskValue"
+  >("");
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  function refresh() {
+    const all = getProducts();
+    setProducts(all);
+    setDashboardData(calcDashboard(all));
+  }
+
+  function handleInputChange(event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+    const { name, value } = event.target;
+    if (event.target instanceof HTMLInputElement && event.target.type === "checkbox") {
+      const checked = event.target.checked;
+      setFormData((prev) => ({ ...prev, [name]: checked, unitCost: checked ? "" : prev.unitCost }));
+      return;
+    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (fieldErrors[name as keyof FieldErrors]) {
+      setFieldErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  }
+
+  function validateForm(): FieldErrors {
+    const errors: FieldErrors = { ...EMPTY_ERRORS };
+    if (!formData.name.trim()) errors.name = "Nome é obrigatório";
+    if (!formData.category.trim()) errors.category = "Categoria é obrigatória";
+    if (!formData.quantity || Number(formData.quantity) <= 0)
+      errors.quantity = "Quantidade deve ser maior que zero";
+    if (!formData.isDonation && (!formData.unitCost || Number(formData.unitCost) <= 0))
+      errors.unitCost = "Custo unitário deve ser maior que zero";
+    if (!formData.expirationDate)
+      errors.expirationDate = "Data de validade é obrigatória";
+    setFieldErrors(errors);
+    return errors;
+  }
+
+  function handleSubmitProduct(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setFeedbackMessage("");
+    setFeedbackType("");
+
+    const errors = validateForm();
+    if (Object.values(errors).some((e) => e)) {
+      setFeedbackMessage("Corrija os erros antes de enviar.");
+      setFeedbackType("error");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const payload = {
+      name: formData.name.trim(),
+      category: formData.category,
+      quantity: Number(formData.quantity),
+      unitCost: formData.isDonation ? 0 : Number(formData.unitCost),
+      expirationDate: formData.expirationDate,
+      isDonation: formData.isDonation,
+    };
+
+    if (editingProductId !== null) {
+      updateProduct(editingProductId, payload);
+    } else {
+      createProduct(payload);
+    }
+
+    refresh();
+    setFormData(EMPTY_FORM);
+    setEditingProductId(null);
+    setSearchQuery("");
+    setStatusFilter("");
+    setCategoryFilter("");
+    setSortOption("");
+    setFeedbackMessage(editingProductId !== null ? "Produto atualizado." : "Produto cadastrado.");
+    setFeedbackType("success");
+    setFieldErrors(EMPTY_ERRORS);
+    setIsSubmitting(false);
+  }
+
+  function handleEditProduct(product: Product) {
+    setFormData({
+      name: product.name,
+      category: product.category,
+      quantity: String(product.quantity),
+      unitCost: product.isDonation ? "" : String(product.unitCost),
+      expirationDate: product.expirationDate,
+      isDonation: product.isDonation,
+    });
+    setEditingProductId(product.id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleDeleteProduct(id: number) {
+    if (!window.confirm("Deseja realmente excluir este produto?")) return;
+    deleteProduct(id);
+    refresh();
+  }
+
+  const displayedProducts = products
+    .filter((product) => {
+      const matchesSearch =
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.category.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter ? product.status === statusFilter : true;
+      const matchesCategory = categoryFilter ? product.category === categoryFilter : true;
+      return matchesSearch && matchesStatus && matchesCategory;
+    })
+    .sort((a, b) => {
+      if (sortOption === "name") return a.name.localeCompare(b.name);
+      if (sortOption === "quantity") return b.quantity - a.quantity;
+      if (sortOption === "expirationDate")
+        return new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime();
+      if (sortOption === "riskValue") return b.riskValue - a.riskValue;
+      return 0;
+    });
+
+  return {
+    dashboardData,
+    editingProductId,
+    formData,
+    isSubmitting,
+    feedbackMessage,
+    feedbackType,
+    fieldErrors,
+    searchQuery,
+    statusFilter,
+    categoryFilter,
+    sortOption,
+    displayedProducts,
+    setSearchQuery,
+    setStatusFilter,
+    setCategoryFilter,
+    setSortOption,
+    handleInputChange,
+    handleSubmitProduct,
+    handleEditProduct,
+    handleDeleteProduct,
+  };
+}
